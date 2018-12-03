@@ -1,0 +1,125 @@
+Attribute VB_Name = "sociometry_visualizationscript"
+Sub output()
+Attribute output.VB_ProcData.VB_Invoke_Func = "o\n14"
+'
+' Generates input for Graphviz tool
+'
+' Change all CHANGE.XYZ parameters below according to the to be processed xls
+
+' Collecting input parameters:
+Dim ScriptInput As String
+ScriptInput = InputBox("Please add an input parameter, e.g." & vbCrLf & vbCrLf & "teamname:[CHANGE.JBrown, CHANGE.ITaylor,etc]" & vbCrLf & "projectname: [CHANGE.Pr1, CHANGE.Pr2]" & vbCrLf & "highlight:[CHANGE.TeamLead,CHANGE.Binaryparam]")
+
+' opening and naming the output file according to the input parameter
+Open ThisWorkbook.Path & "\sociometry_" & ActiveSheet.Name & "_" & ScriptInput & "_generated.gv" For Output As #1
+
+'graphviz specific code
+Print #1, "digraph world {"
+Print #1, "size=""20, 20"""
+'by default nodes are presented without names - remove the label= parameter to visualize names
+Print #1, "Node [width=0.3 height=0.3 label=""""]"
+
+'JBrown, ITaylor are dummy team leads
+    If ScriptInput = "CHANGE.JBrown" Or ScriptInput = "CHANGE.ITaylor" Then
+	'Team lead's nodes are blue color
+        Print #1, ScriptInput & "[style=filled fillcolor=blue]"
+	'Meta node representing outside team referrals is yellow
+        Print #1, "Other [style=filled fillcolor=yellow]"
+    ElseIf ScriptInput = "CHANGE.Pr1" Or ScriptInput = "CHANGE.Pr2" Then
+        Print #1, "Other [style=filled fillcolor=yellow]"
+    ElseIf ScriptInput = "CHANGE.Any binary" Then
+        Print #1, "CHANGE.Anyone1 [style=filled fillcolor=orange]"
+        Print #1, "CHANGE.Anyone2 [style=filled fillcolor=orange]"
+    End If
+
+
+For i = 8 To 91
+    Jelolo = ActiveSheet.Cells(i, 2).Value
+    Jeloloteam = ActiveSheet.Cells(i, 7).Value
+    JeloloProject = ActiveSheet.Cells(i, 3).Value
+    JeloloGender = ActiveSheet.Cells(i, 4).Value
+
+    If ScriptInput = "CHANGE.Teamlead" Then
+        If ActiveSheet.Cells(i, 6).Value > 0 Then
+            Print #1, Jelolo & " [style=filled fillcolor=blue]"
+        End If
+    ElseIf ScriptInput = "CHANGE.Any binary" Then
+        If ActiveSheet.Cells(i, 5).Value > 0 Then
+            Print #1, Jelolo & " [style=filled fillcolor=orange]"
+        End If
+    ElseIf ScriptInput = "Male" Then
+        If JeloloGender = "M" Then
+            Print #1, Jelolo & " [style=filled fillcolor=green]"
+        End If
+    ElseIf ScriptInput = "Female" Then
+        If JeloloGender = "F" Then
+            Print #1, Jelolo & " [style=filled fillcolor=green]"
+        End If
+    End If
+    
+
+    Dim Jelolt(1 To 15) As String
+    Jeloltpointer = 0
+    For J = 9 To 94
+        Jeloltertek = ActiveSheet.Cells(i, J).Value
+        Jeloltteam = ActiveSheet.Cells(5, J).Value
+        JeloltProject = ActiveSheet.Cells(3, J).Value
+      
+        If Jeloltertek > 0 Then
+            For o = 1 To Jeloltertek
+                Jeloltpointer = Jeloltpointer + 1
+		'Team leads
+                If ScriptInput = "CHANGE.JBrown" Or ScriptInput = "CHANGE.ITaylor" Then
+                    If Jeloltteam = ScriptInput Then
+                        Jelolt(Jeloltpointer) = ActiveSheet.Cells(6, J).Value
+                    Else
+                        Jelolt(Jeloltpointer) = "Other"
+                    End If
+		'Projects
+                ElseIf ScriptInput = "CHANGE.Pr1" Or ScriptInput = "CHANGE.Pr2" Then
+                    If JeloltProject = ScriptInput Then
+                        Jelolt(Jeloltpointer) = ActiveSheet.Cells(6, J).Value
+                    Else
+                        Jelolt(Jeloltpointer) = "Other"
+                    End If
+                Else
+                    Jelolt(Jeloltpointer) = ActiveSheet.Cells(6, J).Value
+                End If
+
+            Next o
+                
+            
+            
+        End If
+    Next J
+    Outputstr = ""
+    If Jeloltpointer = 1 Then
+        Outputstr = Jelolo & " -> " & Jelolt(Jeloltpointer)
+    ElseIf Jeloltpointer > 1 Then
+        Outputstr = Jelolo & " -> { " & Jelolt(1)
+        For k = 2 To Jeloltpointer
+             Outputstr = Outputstr & " ; " & Jelolt(k)
+        Next k
+        Outputstr = Outputstr & " }"
+    End If
+    If Outputstr <> "" Then
+        If ScriptInput = "CHANGE.JBrown" Or ScriptInput = "CHANGE.ITaylor" Then
+            If Jeloloteam = ScriptInput Then
+                Print #1, Outputstr
+            End If
+        ElseIf ScriptInput = "CHANGE.Pr1" Or ScriptInput = "CHANGE.Pr2" Then
+            If JeloloProject = ScriptInput Then
+                Print #1, Outputstr
+            End If
+        Else
+            Print #1, Outputstr
+        End If
+    End If
+   
+Next i
+Print #1, "}"
+Close #1
+
+ 
+
+End Sub
